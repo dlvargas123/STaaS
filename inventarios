@@ -1,28 +1,43 @@
-#!/bin/bash
+import os
+import csv
+import traceback
+from datetime import datetime
 
-# Directorio a escanear
-DIRECTORY="/mnt/POOOL-SMB"
+# Directorio de entrada
+input_directory = "/mnt/POOL-STORAGE/"
 
-# Directorio donde se guardan los archivos CSV
-OUTPUT_DIRECTORY="/root/inventario_dlvargas"
+# Obtener la fecha actual y formatearla como YYYY-MM-DD
+current_date = datetime.now().strftime("%Y-%m-%d")
 
-# Nombre del archivo CSV de salida con la fecha actual
-OUTPUT_FILE="${OUTPUT_DIRECTORY}/inventario_$(date +'%Y-%m-%d').csv"
+# Archivo de salida basado en la fecha actual
+output_file = f"/root/inventario_dlvargas/{current_date}_inventario.csv"  # Usa la ruta completa
 
-# Encabezado del archivo CSV
-echo "Length,Name,Extension,FullName" > "$OUTPUT_FILE"
+# Archivo de log para errores
+log_file = "/root/inventario_dlvargas/error.log"  # Usa la ruta completa
 
-# Eliminar archivos CSV más antiguos de 7 días
-find "$OUTPUT_DIRECTORY" -type f -name "inventario_*" -mtime +7 -exec rm {} \;
+# Función para obtener la extensión de un archivo
+def get_extension(filename):
+    _, extension = os.path.splitext(filename)
+    return extension[1:] if extension else ""
 
-# Recorre todos los archivos en el directorio y subdirectorios
-find "$DIRECTORY" -type f | while read -r FILE; do
-    # Obtiene propiedades del archivo
-    LENGTH=$(stat -c%s "$FILE")
-    NAME=$(basename "$FILE")
-    EXTENSION="${NAME##*.}"
-    FULLNAME=$(readlink -f "$FILE")
+try:
+    # Crear y escribir el archivo CSV
+    with open(output_file, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Length", "Name", "Extension", "FullName"])
 
-    # Escribe la información en el archivo CSV
-    echo "$LENGTH,$NAME,$EXTENSION,$FULLNAME" >> "$OUTPUT_FILE"
-done
+        # Recorrer todos los archivos y directorios en input_directory
+        for root, dirs, files in os.walk(input_directory):
+            for name in dirs + files:
+                fullname = os.path.join(root, name)
+                if os.path.isfile(fullname):
+                    length = os.path.getsize(fullname)
+                else:
+                    length = 0
+                extension = get_extension(name)
+                writer.writerow([length, name, extension, fullname])
+except Exception as e:
+    with open(log_file, 'a') as log:
+        log.write(f"Error: {e}\n")
+        log.write(traceback.format_exc())
+        log.write("\n")
