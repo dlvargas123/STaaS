@@ -1,3 +1,21 @@
+#!/bin/bash
+
+# Carpeta de destino
+target_directory="/root/inventario_dlvargas"
+
+# Crear la carpeta de destino
+mkdir -p "$target_directory"
+
+# Verificar si la carpeta se creó correctamente
+if [ -d "$target_directory" ]; then
+    echo "La carpeta $target_directory se ha creado correctamente."
+else
+    echo "Error: No se pudo crear la carpeta $target_directory."
+    exit 1
+fi
+
+# Crear el archivo inventario.py con el contenido especificado
+cat << 'EOF' > "$target_directory/inventario.py"
 import os
 import csv
 import traceback
@@ -41,3 +59,15 @@ except Exception as e:
         log.write(f"Error: {e}\n")
         log.write(traceback.format_exc())
         log.write("\n")
+EOF
+
+# Dar permisos de ejecución al archivo inventario.py
+chmod +x "$target_directory/inventario.py"
+
+# Verificar si el archivo inventario.py se creó correctamente
+if [ -f "$target_directory/inventario.py" ]; then
+    echo "El archivo $target_directory/inventario.py se ha creado correctamente."
+else
+    echo "Error: No se pudo crear el archivo $target_directory/inventario.py."
+    exit 1
+fi
