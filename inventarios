@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Directorio a escanear
+DIRECTORY="/mnt/POOOL-SMB"
+
+# Directorio donde se guardan los archivos CSV
+OUTPUT_DIRECTORY="/root/inventario_dlvargas"
+
+# Nombre del archivo CSV de salida con la fecha actual
+OUTPUT_FILE="${OUTPUT_DIRECTORY}/inventario_$(date +'%Y-%m-%d').csv"
+
+# Encabezado del archivo CSV
+echo "Length,Name,Extension,FullName" > "$OUTPUT_FILE"
+
+# Eliminar archivos CSV más antiguos de 7 días
+find "$OUTPUT_DIRECTORY" -type f -name "inventario_*" -mtime +7 -exec rm {} \;
+
+# Recorre todos los archivos en el directorio y subdirectorios
+find "$DIRECTORY" -type f | while read -r FILE; do
+    # Obtiene propiedades del archivo
+    LENGTH=$(stat -c%s "$FILE")
+    NAME=$(basename "$FILE")
+    EXTENSION="${NAME##*.}"
+    FULLNAME=$(readlink -f "$FILE")
+
+    # Escribe la información en el archivo CSV
+    echo "$LENGTH,$NAME,$EXTENSION,$FULLNAME" >> "$OUTPUT_FILE"
+done
