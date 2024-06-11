@@ -19,26 +19,54 @@ cat << 'EOF' > "$target_directory/inventario.py"
 import os
 import csv
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Directorio de entrada
 input_directory = "/mnt/POOL-STORAGE/"
 
-# Obtener la fecha actual y formatearla como YYYY-MM-DD
-current_date = datetime.now().strftime("%Y-%m-%d")
-
-# Archivo de salida basado en la fecha actual
-output_file = f"/root/inventario_dlvargas/{current_date}_inventario.csv"  # Usa la ruta completa
+# Directorio de salida
+output_directory = "/root/inventario_dlvargas/"
 
 # Archivo de log para errores
-log_file = "/root/inventario_dlvargas/error.log"  # Usa la ruta completa
+log_file = os.path.join(output_directory, "error.log")
 
 # Función para obtener la extensión de un archivo
 def get_extension(filename):
     _, extension = os.path.splitext(filename)
     return extension[1:] if extension else ""
 
+# Función para eliminar archivos de inventario antiguos
+def clean_old_inventories(directory, days=7):
+    try:
+        # Obtener la fecha límite
+        limit_date = datetime.now() - timedelta(days=days)
+        for filename in os.listdir(directory):
+            filepath = os.path.join(directory, filename)
+            if os.path.isfile(filepath) and filename.endswith("_inventario.csv"):
+                # Obtener la fecha del archivo a partir del nombre
+                try:
+                    file_date_str = filename.split("_")[0]
+                    file_date = datetime.strptime(file_date_str, "%Y-%m-%d")
+                    if file_date < limit_date:
+                        os.remove(filepath)
+                except ValueError:
+                    continue
+    except Exception as e:
+        with open(log_file, 'a') as log:
+            log.write(f"Error limpiando inventarios antiguos: {e}\n")
+            log.write(traceback.format_exc())
+            log.write("\n")
+
 try:
+    # Limpiar inventarios antiguos
+    clean_old_inventories(output_directory)
+
+    # Obtener la fecha actual y formatearla como YYYY-MM-DD
+    current_date = datetime.now().strftime("%Y-%m-%d")
+
+    # Archivo de salida basado en la fecha actual
+    output_file = os.path.join(output_directory, f"{current_date}_inventario.csv")
+
     # Crear y escribir el archivo CSV
     with open(output_file, mode='w', newline='') as file:
         writer = csv.writer(file)
